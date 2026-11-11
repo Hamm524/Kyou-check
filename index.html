@@ -98,6 +98,13 @@ h2.hello{font-size:26px;margin:6px 0 2px;line-height:1.3}
 .srow .lb{flex:1;font-weight:700}
 .mini{border:1px solid var(--line);background:#fff;border-radius:8px;width:36px;height:36px;font-size:15px}
 .mini.del{color:var(--red)}
+.row.ed{cursor:default}
+.row.ed .lb{min-width:0;overflow-wrap:anywhere}
+.row.ed.cur{border-color:var(--pur);background:#efeafb}
+.acts{display:flex;gap:6px;flex:none}
+.acts .mini{width:40px;height:40px;font-size:17px}
+.acts .mini:disabled{opacity:.3}
+.acts .sp{width:40px}
 input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;border-radius:10px;padding:10px 12px;width:100%;background:#fff;color:var(--ink)}
 .emojis{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 .emojis button{width:44px;height:44px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:24px}
@@ -466,8 +473,12 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     h += '<div class="list">';
     list.forEach(function(i){
       if(ui.cedit){
-        h += '<div class="row"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + '</span>' +
-          (i.own ? '<button class="mini del" data-act="cdel" data-id="' + i.id + '" aria-label="けす">✕</button>' : '<span class="note" style="margin:0">おうちの人が きめたよ</span>') + '</div>';
+        var pos = list.indexOf(i);
+        h += '<div class="row ed' + (ui.editId === i.id ? ' cur' : '') + '"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + (i.own ? '' : ' <span title="おうちの人が きめたよ">🔒</span>') + '</span>' +
+          '<span class="acts"><button class="mini" data-act="up" data-id="' + i.id + '"' + (pos === 0 ? ' disabled' : '') + ' aria-label="うえへ">↑</button>' +
+          '<button class="mini" data-act="down" data-id="' + i.id + '"' + (pos === list.length - 1 ? ' disabled' : '') + ' aria-label="したへ">↓</button>' +
+          (i.own ? '<button class="mini" data-act="cedit1" data-id="' + i.id + '" aria-label="なおす">✏️</button><button class="mini del" data-act="cdel" data-id="' + i.id + '" aria-label="けす">✕</button>' : '<span class="sp"></span><span class="sp"></span>') +
+          '</span></div>';
         return;
       }
       var on = !!c[i.id];
@@ -477,10 +488,13 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     });
     h += '</div>';
     if(ui.cedit){
-      h += '<div class="sec" style="margin-top:14px"><h3>＋ じぶんの やること（' + (ui.tab === 'before' ? '🏫 いってきます前' : '🏠 ただいま後') + '）</h3>' +
+      var ed = null; S.items.forEach(function(i){ if(i.id === ui.editId && i.own) ed = i; });
+      h += '<p class="note" style="margin:10px 0 0">↑↓ で ならびかえ。✏️ で なおす。🔒 は おうちの人が きめた やること（ならびかえだけ できるよ）</p>';
+      h += '<div class="sec" style="margin-top:14px"><h3>' + (ed ? '✏️ なおす' : '＋ じぶんの やること') + '（' + (ui.tab === 'before' ? '🏫 いってきます前' : '🏠 ただいま後') + '）</h3>' +
         '<div class="emojis" id="cemo">' + EMOJI.map(function(e){ return '<button data-act="cpick" data-v="' + e + '" class="' + (e === ui.newIcon ? 'on' : '') + '">' + e + '</button>'; }).join('') + '</div>' +
-        '<input type="text" id="ct" placeholder="やること（れい：ほんを よむ）" maxlength="20">' +
-        '<div style="height:10px"></div><button class="btn" data-act="cadd">ふやす</button></div>' +
+        '<input type="text" id="ct" placeholder="やること（れい：ほんを よむ）" maxlength="20" value="' + (ed ? esc(ed.label) : '') + '">' +
+        '<div style="height:10px"></div><button class="btn" data-act="' + (ed ? 'csave' : 'cadd') + '">' + (ed ? 'ほぞん' : 'ふやす') + '</button>' +
+        (ed ? '<button class="btn sub" data-act="cnoedit">やめる</button>' : '') + '</div>' +
         '<button class="btn sub" data-act="cedit">✔ おわり</button>';
     }else{
       h += '<button class="btn sub" style="margin-top:14px" data-act="cedit">✏️ じぶんの やることを ふやす</button>';
@@ -721,7 +735,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     if(act === 'mode'){
       if(v === 'child'){ ui.mode = 'child'; ui.cedit = false; if(unseenCount() > 0) ui.tab = 'stamp'; render(); }
       else if(ui.mode !== 'parent'){ if(DEV.role === 'parent') enterParent(); else showPin(); }
-    }else if(act === 'tab'){ ui.tab = v; ui.cedit = false; render();
+    }else if(act === 'tab'){ ui.tab = v; ui.cedit = false; ui.editId = null; render();
     }else if(act === 'ptab'){ ui.ptab = v; ui.resetArm = false; ui.unlinkArm = false; render();
     }else if(act === 'toggle'){
       if(ui.tab === 'after' && afterLocked()) return;
@@ -748,17 +762,32 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
       ui.newIcon = v;
       Array.prototype.forEach.call(document.querySelectorAll('#emo button'), function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
     }else if(act === 'cedit'){
-      ui.cedit = !ui.cedit; render();
+      ui.cedit = !ui.cedit; ui.editId = null; render();
+    }else if(act === 'cedit1'){
+      var ei = null; S.items.forEach(function(i){ if(i.id === id && i.own) ei = i; });
+      if(!ei) return;
+      ui.editId = id; ui.newIcon = ei.icon; render();
+      var ctEl = document.getElementById('ct'); if(ctEl && ctEl.scrollIntoView) ctEl.scrollIntoView({block:'center'});
+    }else if(act === 'cnoedit'){
+      ui.editId = null; render();
+    }else if(act === 'csave'){
+      var sv = null; S.items.forEach(function(i){ if(i.id === ui.editId && i.own) sv = i; });
+      var stxt = ((document.getElementById('ct') || {}).value || '').trim();
+      if(!sv){ ui.editId = null; render(); return; }
+      if(!stxt){ toast('やることを いれてね'); return; }
+      sv.label = stxt; sv.icon = ui.newIcon; ui.editId = null;
+      touchCfg(); syncTicket(today()); save(); render(); toast('なおしたよ！');
     }else if(act === 'cpick'){
       ui.newIcon = v;
       Array.prototype.forEach.call(document.querySelectorAll('#cemo button'), function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
     }else if(act === 'cadd'){
       var ci = document.getElementById('ct'), ctxt = (ci.value || '').trim();
       if(!ctxt){ toast('やることを いれてね'); return; }
-      S.items.push({ id:'c' + now(), icon:ui.newIcon, label:ctxt, list:ui.tab, own:true });
+      S.items.push({ id:'c' + now(), icon:ui.newIcon, label:ctxt, list:ui.tab, own:true }); ui.editId = null;
       touchCfg(); syncTicket(today()); save(); render(); toast('ふやしたよ！');
     }else if(act === 'cdel'){
       S.items = S.items.filter(function(i){ return !(i.id === id && i.own); });
+      if(ui.editId === id) ui.editId = null;
       touchCfg(); syncTicket(today()); save(); render();
     }else if(act === 'add'){
       var inp = document.getElementById('nt'), sel = document.getElementById('nl');
