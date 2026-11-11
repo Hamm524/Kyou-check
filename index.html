@@ -515,7 +515,8 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     if(S.reward) h += '<div class="reward">🎁 ごほうび：<b>' + esc(S.reward) + '</b></div>';
     h += '</div>';
     if(full > 0) h += '<div class="date" style="margin-top:14px;text-align:center">🏆 コンプリート ' + full + ' まい</div>';
-    if(!N) h += '<div class="empty">おうちの人が チケットを かくにんすると、<br>スタンプを もらえるよ！</div>';
+    if(DEV.code) h += '<button class="btn sub" data-act="syncnow">🔄 さいしんに する</button>';
+    h += '<div class="sec" style="margin-top:14px"><h3>⭐ スタンプの もらいかた</h3><p class="note" style="margin:0;font-size:14px">① 「ただいま後」を ぜんぶ ✅ にする<br>② おうちの人に チケットが とどく<br>③ おうちの人が OK にすると、スタンプを 1こ もらえる<br><span style="color:#6b6877">（1日 1こ。「もういちど」の ときは、もう1回 ぜんぶ ✅ にしよう）</span></p></div>';
     ui._newCount = newCount;
     return h;
   }
@@ -578,8 +579,19 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     return h;
   }
 
+  function renderRules(){
+    return '<div class="sec"><h3>📖 スタンプの ルール</h3><p class="note" style="margin:0;font-size:14px;line-height:1.8">' +
+      '・スタンプは、おうちの人が チケットを <b>右へドラッグして OK</b> にした ときだけ 1こ おされます。<br>' +
+      '・チケットは、こどもが その日の「ただいま後」を <b>ぜんぶ ✅</b> にすると できます（1つでも はずすと きえます）。<br>' +
+      '・1日 チケット1まい、スタンプは 1日 1こ までです。<br>' +
+      '・<b>左へドラッグ</b>（もういちど）だと スタンプは おされず、その日の「ただいま後」の ✅ が ぜんぶ きえます。もう1回 ぜんぶ ✅ にすると、あたらしい チケットが とどきます。<br>' +
+      '・「いってきます前」は スタンプに かんけい しません。<br>' +
+      '・OK を とりけす ことは できません。<br>' +
+      '・カードが いっぱいに なると コンプリート。ごほうびは 下の せってい で かえられます。<br>' +
+      '・こども画面には、15秒ごとに さいしんの 状態を たしかめます（アプリを ひらいた ときも すぐ）。</p></div>';
+  }
   function renderSettings(){
-    var h = renderSync();
+    var h = renderRules() + renderSync();
     h += '<div class="sec"><h3>こどもの なまえ</h3><input type="text" id="nm" value="' + esc(S.name) + '" maxlength="12"></div>';
     [['before','🏫 いってきます前'],['after','🏠 ただいま後']].forEach(function(s){
       var list = itemsOf(s[0]);
@@ -820,7 +832,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
   window.addEventListener('online', function(){ syncNow(); });
   setInterval(function(){
     if(document.visibilityState !== 'visible' || !DEV.code || SY.busy) return;
-    var iv = SY.state === 'err' ? 60000 : ((DEV.role === 'parent' || ui.mode === 'parent') ? 15000 : 30000);
+    var iv = SY.state === 'err' ? 60000 : 15000;
     if(now() - SY.lastTry >= iv) syncNow();
   }, 5000);
 

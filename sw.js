@@ -1,5 +1,5 @@
 // きょうのチェック：オフラインでも ひらけるようにする（同期の通信は さわらない）
-var V = 'kyou-check-v2';
+var V = 'kyou-check-v3';
 var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(V).then(function(c){ return c.addAll(ASSETS); }).then(function(){ return self.skipWaiting(); }));
