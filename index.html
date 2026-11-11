@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>きょうのチェック（試作）</title>
+<meta name="theme-color" content="#4b1d8f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="きょうのチェック">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+:root{
+  --bg:#faf9f5; --ink:#2b2a33; --sub:#6b6877; --line:#e4e1ea; --card:#fff;
+  --pur:#4b1d8f; --grn:#2fae7f; --grn-bg:#eaf8f1; --org:#d98a1f; --org-bg:#fff4e0; --red:#d2574f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",system-ui,sans-serif;}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:600px;margin:0 auto;padding:0 16px 80px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 0 10px}
+.top h1{font-size:15px;margin:0;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sychip{font-size:14px;border-radius:999px;padding:2px 8px;background:#ece9f3}
+.sychip[data-s="err"]{background:#fdeceb}
+.seg{display:flex;background:#ece9f3;border-radius:999px;padding:3px;flex:none}
+.seg button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-size:14px;font-weight:700;color:var(--sub)}
+.seg button.on{background:#fff;color:var(--pur);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+h2.hello{font-size:26px;margin:6px 0 2px;line-height:1.3}
+.date{color:var(--sub);font-size:15px;margin-bottom:14px}
+.tabs{display:flex;border-bottom:2px solid var(--line);margin-bottom:14px}
+.tabs button{flex:1;border:0;background:transparent;padding:10px 2px;font-size:14px;line-height:1.35;font-weight:700;color:var(--sub);position:relative}
+.tabs button.on{color:var(--pur)}
+.tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:4px;background:var(--pur);border-radius:2px}
+.tabs small{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.bar{height:12px;background:#ece9f3;border-radius:6px;overflow:hidden;margin:2px 0 14px}
+.bar i{display:block;height:100%;background:var(--grn);border-radius:6px;transition:width .3s}
+.banner{border-radius:16px;padding:14px 16px;margin-bottom:14px;font-size:16px;font-weight:700;line-height:1.5}
+.banner.ok{background:var(--grn-bg);color:#17694b}
+.banner.wait{background:#efeafb;color:var(--pur)}
+.banner.redo{background:var(--org-bg);color:#8a5200}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:10px 14px;transition:background .2s,border-color .2s}
+.row:disabled{opacity:.75;cursor:default}
+.row .ic{width:52px;height:52px;border-radius:14px;background:#f4f2f8;display:grid;place-items:center;font-size:30px;flex:none}
+.row .lb{flex:1;font-size:19px;font-weight:700;line-height:1.3}
+.row.on{background:var(--grn-bg);border-color:#9bdcc2}
+.sw{position:relative;width:92px;height:48px;border-radius:24px;background:#e6e3ee;flex:none;transition:background .2s}
+.sw i{position:absolute;top:5px;left:5px;width:38px;height:38px;border-radius:50%;background:var(--ink);transition:transform .2s}
+.sw .x{position:absolute;right:13px;top:50%;transform:translateY(-52%);font-size:20px;font-weight:800;color:var(--red)}
+.sw .ck{position:absolute;left:11px;top:50%;transform:translateY(-52%);font-size:22px;opacity:0}
+.row.on .sw{background:#b5e6d0}
+.row.on .sw i{transform:translateX(44px)}
+.row.on .sw .ck{opacity:1}
+.row.on .sw .x{opacity:0}
+.empty{text-align:center;color:var(--sub);padding:36px 12px;line-height:1.8;font-size:15px}
+/* sync */
+.sybar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f4f2f8;border-radius:12px;padding:6px 6px 6px 12px;margin-bottom:14px;font-size:13px;color:var(--sub);font-weight:700}
+.sybar .mini{width:auto;padding:0 12px}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:26px;letter-spacing:.12em;text-align:center;background:#f4f2f8;border-radius:12px;padding:12px;user-select:all;-webkit-user-select:all;word-break:break-all}
+/* tickets */
+.tw{position:relative;margin-bottom:16px;--p:0}
+.tw .bg{position:absolute;inset:0;border-radius:16px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-weight:800;font-size:18px;overflow:hidden}
+.tw .bgL{color:#8a5200;opacity:0}
+.tw .bgR{color:#fff;opacity:0}
+.tw.r .bg{background:var(--grn)}
+.tw.l .bg{background:var(--org-bg)}
+.tw.r .bgR{opacity:var(--p)}
+.tw.l .bgL{opacity:var(--p)}
+.ticket{position:relative;display:flex;background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(40,30,70,.16);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab;overflow:hidden}
+.ticket .band{width:34px;background:#6fd3b3;color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.ticket .band span{writing-mode:vertical-rl;font-size:13px;font-weight:800;letter-spacing:.15em}
+.ticket .tb{flex:1;padding:14px 16px 10px;min-width:0}
+.ticket .t1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ticket .t1 b{font-size:20px;line-height:1.3}
+.ticket .badge{background:#d4932a;color:#fff;font-weight:800;font-size:16px;padding:4px 14px;border-radius:4px;white-space:nowrap}
+.ticket .dots{border-top:3px dotted #cfcbd8;margin:8px 0 10px}
+.ticket .meta{font-size:16px;color:#4a4755;margin:6px 0;display:flex;gap:10px;align-items:center}
+.ticket .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.ticket .chips span{background:var(--grn-bg);color:#17694b;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700}
+.ticket .hint{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);text-align:center;font-size:13px;font-weight:700;color:var(--pur);display:flex;justify-content:space-between}
+.ticket .hint em{font-style:normal;display:inline-block;animation:nudge 1.4s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.past{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.past .st{margin-left:auto;font-weight:800;color:var(--grn);border:2px solid var(--grn);border-radius:8px;padding:2px 10px;transform:rotate(-6deg);font-size:14px;white-space:nowrap}
+.past .st.redo{color:var(--org);border-color:var(--org)}
+.past b{display:block}.past small{color:var(--sub)}
+/* settings */
+.sec{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.sec h3{margin:0 0 10px;font-size:16px}
+.srow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #f0eef4}
+.srow:first-of-type{border-top:0}
+.srow .ic{font-size:24px;width:34px;text-align:center}
+.srow .lb{flex:1;font-weight:700}
+.mini{border:1px solid var(--line);background:#fff;border-radius:8px;width:36px;height:36px;font-size:15px}
+.mini.del{color:var(--red)}
+input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;border-radius:10px;padding:10px 12px;width:100%;background:#fff;color:var(--ink)}
+.emojis{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.emojis button{width:44px;height:44px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:24px}
+.emojis button.on{border-color:var(--pur);background:#efeafb}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;font-size:16px;background:var(--pur);color:#fff;width:100%}
+.btn.sub{background:#ece9f3;color:var(--ink);margin-top:8px}
+.btn.warn{background:#fdeceb;color:var(--red);margin-top:8px}
+.two .btn{margin-top:0}
+.note{font-size:13px;color:var(--sub);line-height:1.6;margin:8px 0 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+/* stamp card */
+.card{background:#fffdf3;border:3px dashed #e8c76a;border-radius:22px;padding:16px}
+.card h3{margin:0;font-size:20px}
+.grid{display:grid;gap:10px;margin:14px 0}
+.slot{aspect-ratio:1;max-width:100%;border-radius:50%;display:grid;place-items:center;font-size:clamp(22px,7vw,40px)}
+.slot.e{border:2px dashed #d9d3c0;color:#c7c0aa;font-size:16px;font-weight:700}
+.slot.g{border:2px dashed #e8a33d;background:#fff4e0}
+.slot.f{background:#fff;border:3px solid var(--c);box-shadow:inset 0 0 0 3px #fff}
+.slot.new{animation:pop .8s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{transform:scale(2.8) rotate(-30deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(0)}}
+.reward{background:var(--org-bg);color:#8a5200;border-radius:12px;padding:10px 14px;font-size:15px;text-align:center}
+.tabs .te{display:block;font-size:20px}
+/* pin */
+#pin{position:fixed;inset:0;background:rgba(30,25,50,.55);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+#pin.show{display:flex}
+.pbox{background:#fff;border-radius:22px;padding:22px 20px;width:100%;max-width:320px;text-align:center}
+.pbox h3{margin:0 0 4px}
+.pbox p{margin:0 0 14px;font-size:13px;color:var(--sub)}
+.pdots{display:flex;gap:12px;justify-content:center;margin-bottom:16px}
+.pdots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--pur)}
+.pdots i.f{background:var(--pur)}
+.pbox.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.keys button{height:56px;border-radius:14px;border:1px solid var(--line);background:#f7f6fa;font-size:22px;font-weight:700}
+.pcancel{margin-top:12px;border:0;background:none;color:var(--sub);font-size:14px;padding:8px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-weight:700;font-size:15px;z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.burst{position:fixed;left:0;right:0;top:38%;height:0;pointer-events:none;z-index:50}
+.burst span{position:absolute;left:50%;font-size:30px;animation:fly 1.2s ease-out forwards}
+@keyframes fly{from{transform:translate(0,0) scale(.4);opacity:1}to{transform:translate(var(--x),var(--y)) scale(1.2) rotate(var(--r));opacity:0}}
+@media (min-width:700px){
+  .wrap{max-width:680px}
+  .row .lb{font-size:22px}
+  h2.hello{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="pin"></div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  /* ===== 設定値：Firebase（ここだけ書きかえる） =====
+     Firebase コンソール → プロジェクトの設定 → マイアプリ（ウェブ）にある
+     projectId と apiKey を入れてください。apiKey は秘密の鍵ではありません（守りは Firestore のルールで行います）。 */
+  var FIREBASE = { projectId: 'task-suzu', apiKey: 'AIzaSyB14MDPL5gDbMSHHhsncNiEXty4blyVQxk' };
+  var COLL = 'kyoucheck';           // Firestore の保存先：kyoucheck/<合言葉>/kv/state
+
+  var KEY = 'kyou-check-proto-v1';  // この端末の記録
+  var DKEY = 'kyou-check-device-v1'; // この端末だけの設定（合言葉・こども用/おうち用）
+  var PIN = '1234';
+  var EMOJI = ['🪥','👕','🎒','🍚','🛏️','🧼','📚','🧸','🛁','🍽️','🧺','📖','✏️','💧','🌙','🐶'];
+  var WD = '日月火水木金土';
+  var BASE_TITLE = document.title;
+
+  function now(){ return Date.now(); }
+  function defaults(){
+    return {
+      name: 'こども',
+      items: [
+        {id:'b1', icon:'🍚', label:'あさごはんを たべた', list:'before'},
+        {id:'b2', icon:'🪥', label:'はみがき', list:'before'},
+        {id:'b3', icon:'👕', label:'きがえ', list:'before'},
+        {id:'b4', icon:'🎒', label:'もちものチェック', list:'before'},
+        {id:'a1', icon:'🧼', label:'てあらい・うがい', list:'after'},
+        {id:'a2', icon:'📚', label:'しゅくだい', list:'after'},
+        {id:'a3', icon:'🎒', label:'あしたの じゅんび', list:'after'},
+        {id:'a4', icon:'🧺', label:'せんたくものを だした', list:'after'},
+        {id:'a5', icon:'🧸', label:'おもちゃの かたづけ', list:'after'}
+      ],
+      checks: {},
+      tickets: [],
+      goal: 10,
+      reward: 'すきな おやつを えらべる',
+      seen: {},
+      cfgAt: 0,
+      resetAt: 0
+    };
+  }
+  function normalize(s){
+    if(!s || typeof s !== 'object' || !Array.isArray(s.items)) return null;
+    if(!s.checks || typeof s.checks !== 'object') s.checks = {};
+    if(!Array.isArray(s.tickets)) s.tickets = [];
+    if(!s.goal) s.goal = 10;
+    if(typeof s.reward !== 'string') s.reward = 'すきな おやつを えらべる';
+    if(typeof s.name !== 'string') s.name = 'こども';
+    if(!s.seen || typeof s.seen !== 'object') s.seen = {};
+    if(typeof s.cfgAt !== 'number') s.cfgAt = 1;
+    if(typeof s.resetAt !== 'number') s.resetAt = 0;
+    Object.keys(s.checks).forEach(function(d){
+      var c = s.checks[d];
+      if(!c || typeof c !== 'object'){ delete s.checks[d]; return; }
+      if(typeof c._at !== 'number') c._at = 1;
+    });
+    s.tickets = s.tickets.filter(function(t){ return t && t.id && t.date; });
+    s.tickets.forEach(function(t){ if(typeof t.at !== 'number') t.at = t.decidedAt || t.doneAt || 1; if(!Array.isArray(t.items)) t.items = []; });
+    return s;
+  }
+  function load(){
+    try{ var s = normalize(JSON.parse(localStorage.getItem(KEY))); if(s) return s; }catch(e){}
+    return defaults();
+  }
+  function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+  function save(){ saveLocal(); if(DEV.code) syncSoon(); }
+  function loadDev(){
+    try{ var d = JSON.parse(localStorage.getItem(DKEY)); if(d && typeof d === 'object') return { code: d.code || '', role: d.role === 'parent' ? 'parent' : 'child' }; }catch(e){}
+    return { code:'', role:'child' };
+  }
+  function saveDev(){ try{ localStorage.setItem(DKEY, JSON.stringify(DEV)); }catch(e){} }
+
+  var S = load();
+  var DEV = loadDev();
+  var ui = { mode:(DEV.role === 'parent' ? 'parent' : 'child'), tab:(new Date().getHours() >= 14 ? 'after' : 'before'), ptab:'tickets', newIcon:EMOJI[0], newList:'before', pin:'', resetArm:false, unlinkArm:false, dragging:false };
+
+  function esc(t){ return String(t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function p2(n){ return (n < 10 ? '0' : '') + n; }
+  function ymd(d){ return d.getFullYear() + '-' + p2(d.getMonth()+1) + '-' + p2(d.getDate()); }
+  function today(){ return ymd(new Date()); }
+  function daysAgo(n){ var d = new Date(); d.setDate(d.getDate() - n); return ymd(d); }
+  function fmtDate(s){ var m = /^(\d+)-(\d+)-(\d+)$/.exec(s); var d = new Date(+m[1], +m[2]-1, +m[3]); return m[1] + '年' + (+m[2]) + '月' + (+m[3]) + '日 (' + WD.charAt(d.getDay()) + ')'; }
+  function fmtShort(s){ var m = /^(\d+)-(\d+)-(\d+)$/.exec(s); var d = new Date(+m[1], +m[2]-1, +m[3]); return (+m[2]) + '月' + (+m[3]) + '日 (' + WD.charAt(d.getDay()) + ')'; }
+  function hhmm(ts){ var d = new Date(ts); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+  function itemsOf(list){ return S.items.filter(function(i){ return i.list === list; }); }
+  function ticketAny(d){ var r = null; S.tickets.forEach(function(t){ if(t.date === d && (!r || r.status === 'cancel')) r = t; }); return r; }
+  function ticketFor(d){ var t = ticketAny(d); return t && t.status !== 'cancel' ? t : null; }
+  function checksOf(d){ return S.checks[d] || {}; }
+  function afterLocked(){ var t = ticketFor(today()); return !!(t && t.status === 'approved'); }
+  var STAMPS = ['⭐','🐶','🐱','🐰','🌸','🍓','🚀','🦄','🐼','🌈','🍀','🐧'];
+  function randStamp(){ return STAMPS[Math.floor(Math.random() * STAMPS.length)]; }
+  function stampsList(){ return S.tickets.filter(function(t){ return t.status === 'approved'; }).sort(function(a, b){ return (a.decidedAt || 0) - (b.decidedAt || 0); }); }
+  function pendingList(){ return S.tickets.filter(function(t){ return t.status === 'pending'; }).sort(function(a, b){ return b.doneAt - a.doneAt; }); }
+  function unseenCount(){ return stampsList().filter(function(t){ return !S.seen[t.id]; }).length; }
+  function touchCfg(){ S.cfgAt = now(); }
+
+  /* ---- ticket logic ---- */
+  function syncTicket(d){
+    var list = itemsOf('after'), c = checksOf(d);
+    var all = list.length > 0 && list.every(function(i){ return c[i.id]; });
+    var tk = ticketAny(d);
+    var snap = list.map(function(i){ return { icon:i.icon, label:i.label }; });
+    if(all){
+      if(!tk){ S.tickets.push({ id:'d' + d, date:d, status:'pending', doneAt:now(), at:now(), items:snap }); }
+      else if(tk.status !== 'approved'){
+        if(tk.status !== 'pending' || JSON.stringify(tk.items) !== JSON.stringify(snap)){
+          tk.status = 'pending'; tk.doneAt = now(); tk.items = snap; tk.at = now();
+        }
+      }
+    }else if(tk && tk.status === 'pending'){
+      tk.status = 'cancel'; tk.at = now();
+    }
+  }
+  function decide(id, status){
+    var tk = null;
+    S.tickets.forEach(function(t){ if(t.id === id) tk = t; });
+    if(!tk || tk.status !== 'pending') { render(); return; }
+    tk.status = status; tk.decidedAt = now(); tk.at = now();
+    if(status === 'approved' && !tk.stamp) tk.stamp = randStamp();
+    if(status === 'redo'){
+      var c = S.checks[tk.date] || {};
+      itemsOf('after').forEach(function(i){ delete c[i.id]; });
+      c._at = now();
+      S.checks[tk.date] = c;
+    }
+    save(); render();
+    toast(status === 'approved' ? '✅ かくにん OK！ スタンプを おしました ' + tk.stamp : '↩ もういちど みてもらうように おくりました');
+  }
+
+  /* ================= 同期（Firestore REST・合言葉方式） ================= */
+  var SY = { busy:false, again:false, ut:null, state:'off', last:0, lastTry:0, msg:'', timer:null, p:null };
+  function fbReady(){ return !!(FIREBASE.projectId && FIREBASE.apiKey); }
+  function docUrl(){
+    return 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(FIREBASE.projectId) +
+      '/databases/(default)/documents/' + COLL + '/' + encodeURIComponent(DEV.code) + '/kv/state?key=' + encodeURIComponent(FIREBASE.apiKey);
+  }
+  function sortObj(o){ var r = {}; Object.keys(o).sort().forEach(function(k){ r[k] = o[k]; }); return r; }
+  function canon(s){
+    var ch = {};
+    Object.keys(s.checks).sort().forEach(function(d){ ch[d] = sortObj(s.checks[d]); });
+    return { v:1, name:s.name, items:s.items, goal:s.goal, reward:s.reward, cfgAt:s.cfgAt, resetAt:s.resetAt, checks:ch,
+      tickets: s.tickets.slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }).map(sortObj) };
+  }
+  function canonStr(s){ return JSON.stringify(canon(s)); }
+  // 2つの記録をまぜる：設定は新しい方、チェックは日ごとに新しい方、チケットは1枚ごとに新しい方
+  function merge(a, b){
+    var cfg = (b.cfgAt || 0) >= (a.cfgAt || 0) ? b : a;
+    var o = { name:cfg.name, items:cfg.items, goal:cfg.goal, reward:cfg.reward, cfgAt:cfg.cfgAt || 0,
+      resetAt:Math.max(a.resetAt || 0, b.resetAt || 0), checks:{}, tickets:[], seen:a.seen || {} };
+    var cut = daysAgo(90);
+    [a.checks, b.checks].forEach(function(cs){
+      Object.keys(cs || {}).forEach(function(d){
+        var c = cs[d];
+        if(d < cut || !c || (c._at || 0) < o.resetAt) return;
+        if(!o.checks[d] || (c._at || 0) > (o.checks[d]._at || 0)) o.checks[d] = c;
+      });
+    });
+    var tm = {};
+    [a.tickets, b.tickets].forEach(function(ts){
+      (ts || []).forEach(function(t){
+        if(!t || !t.id || (t.at || 0) < o.resetAt) return;
+        if(t.status === 'cancel' && t.date < cut) return;
+        var x = tm[t.id];
+        if(!x || (t.at || 0) > (x.at || 0)) tm[t.id] = t;
+      });
+    });
+    o.tickets = Object.keys(tm).map(function(k){ return tm[k]; });
+    return normalize(JSON.parse(JSON.stringify(o)));
+  }
+  function errText(j, code){
+    var st = j && j.error && j.error.status;
+    if(code === 403 || st === 'PERMISSION_DENIED') return 'Firestore のルールで ことわられました（ルールを たしかめてください）';
+    if(code === 429 || st === 'RESOURCE_EXHAUSTED') return '無料枠の きょうの上限に なりました（あした もどります）';
+    if(code === 404) return 'Firebase の projectId が ちがうか、Firestore が まだ 作られていません';
+    if(code === 400 && /API key/i.test((j && j.error && j.error.message) || '')) return 'apiKey が ちがうようです';
+    return 'エラー ' + code + (j && j.error && j.error.message ? '：' + j.error.message : '');
+  }
+  function readJson(r){ return r.text().then(function(t){ try{ return JSON.parse(t); }catch(e){ return {}; } }); }
+  function pull(){
+    return fetch(docUrl(), { cache:'no-store' }).then(function(r){
+      return readJson(r).then(function(j){
+        if(r.status === 404 && j && j.error && j.error.status === 'NOT_FOUND' && /^Document\b/i.test(j.error.message || '')) return null;
+        if(!r.ok) throw new Error(errText(j, r.status));
+        var raw = j.fields && j.fields.data && j.fields.data.stringValue, d = null;
+        try{ d = normalize(JSON.parse(raw)); }catch(e){}
+        return { ut:j.updateTime, data:d };
+      });
+    });
+  }
+  function push(s, ut){
+    var u = docUrl() + (ut ? '&currentDocument.updateTime=' + encodeURIComponent(ut) : '&currentDocument.exists=false');
+    var body = { fields:{ data:{ stringValue:canonStr(s) }, at:{ integerValue:String(now()) } } };
+    return fetch(u, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) }).then(function(r){
+      return readJson(r).then(function(j){
+        if(r.ok) return { ok:true, ut:j.updateTime };
+        var st = j && j.error && j.error.status;
+        if(r.status === 409 || st === 'FAILED_PRECONDITION' || st === 'ALREADY_EXISTS' || st === 'ABORTED') return { ok:false };
+        throw new Error(errText(j, r.status));
+      });
+    });
+  }
+  function applyRemote(m){
+    if(canonStr(m) === canonStr(S)) return;
+    m.seen = S.seen;
+    S = m; saveLocal(); renderSoft();
+  }
+  function syncNow(joining){
+    if(!DEV.code || !fbReady()) return Promise.resolve();
+    if(SY.busy){ SY.again = true; return SY.p; }
+    SY.busy = true; SY.lastTry = now(); SY.state = 'busy'; paintSync();
+    var tries = 0;
+    function round(){
+      tries++;
+      return pull().then(function(rem){
+        var hasRemote = !!(rem && rem.data);
+        if(hasRemote){
+          var base = S;
+          if(joining){ base = JSON.parse(JSON.stringify(S)); base.cfgAt = 0; joining = false; } // つないだ時は 先にある設定を つかう
+          applyRemote(merge(base, rem.data));
+          if(canonStr(S) === canonStr(rem.data)){ SY.ut = rem.ut; return; }
+        }
+        return push(S, rem ? rem.ut : null).then(function(res){
+          if(res.ok){ SY.ut = res.ut; return; }
+          if(tries < 4) return round();
+          throw new Error('ほかの端末と 同時に かきこみました。すこし あとで もういちど');
+        });
+      });
+    }
+    SY.p = round().then(function(){
+      SY.state = 'ok'; SY.last = now(); SY.msg = '';
+    }, function(e){
+      SY.state = 'err';
+      SY.msg = (e && e.name === 'TypeError') ? 'インターネットに つながりません' + (/claude/.test(location.hostname) ? '（claude.ai の試作ページでは 通信できません）' : '') : ((e && e.message) || 'つながりません');
+    }).then(function(){
+      SY.busy = false; paintSync(); updateBadge();
+      if(SY.again){ SY.again = false; return syncNow(); }
+    });
+    return SY.p;
+  }
+  function syncSoon(){ clearTimeout(SY.timer); SY.timer = setTimeout(function(){ syncNow(); }, 600); }
+  function syncText(short){
+    if(!DEV.code) return '';
+    if(!fbReady()) return short ? '⚠️' : '⚠️ Firebase の設定値が まだです';
+    if(SY.state === 'busy') return short ? '🔄' : '🔄 さいしんを たしかめています…';
+    if(SY.state === 'err') return short ? '⚠️' : '⚠️ ' + SY.msg;
+    if(SY.state === 'ok') return short ? '☁️' : '☁️ どうきずみ ' + hhmm(SY.last);
+    return short ? '☁️' : '☁️ つながっています';
+  }
+  function paintSync(){
+    Array.prototype.forEach.call(document.querySelectorAll('.syt'), function(el){
+      el.textContent = syncText(el.classList.contains('sychip'));
+      el.setAttribute('data-s', SY.state);
+    });
+  }
+  function updateBadge(){
+    var n = pendingList().length;
+    document.title = (n && (DEV.role === 'parent' || ui.mode === 'parent') ? '(' + n + ') ' : '') + BASE_TITLE;
+    try{ if(DEV.role === 'parent' && navigator.setAppBadge){ (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(function(){}); } }catch(e){}
+  }
+  function makeCode(){
+    var A = 'abcdefghjkmnpqrstuvwxyz23456789', r = new Uint32Array(10), s = '';
+    try{ crypto.getRandomValues(r); }catch(e){ for(var k = 0; k < 10; k++) r[k] = Math.floor(Math.random() * 4294967296); }
+    for(var i = 0; i < 10; i++) s += A.charAt(r[i] % A.length);
+    return s;
+  }
+  function inputFocused(){ var a = document.activeElement; return !!(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)); }
+  function renderSoft(){
+    if(ui.dragging || inputFocused() || document.getElementById('pin').classList.contains('show')){ ui.needRender = true; return; }
+    render();
+  }
+
+  /* ---- render ---- */
+  var app = document.getElementById('app');
+  function render(){
+    ui.needRender = false;
+    var h = '<div class="top"><h1>✅ きょうのチェック' + (DEV.code ? ' <span class="sychip syt" data-s="' + SY.state + '">' + syncText(true) + '</span>' : '') + '</h1>' +
+      '<div class="seg"><button data-act="mode" data-v="child" class="' + (ui.mode === 'child' ? 'on' : '') + '">こども</button>' +
+      '<button data-act="mode" data-v="parent" class="' + (ui.mode === 'parent' ? 'on' : '') + '">' + (ui.mode === 'parent' || DEV.role === 'parent' ? '' : '🔒 ') + 'おうち</button></div></div>';
+    h += ui.mode === 'child' ? renderChild() : renderParent();
+    app.innerHTML = h;
+    bindDrags();
+    updateBadge();
+    if(ui._newCount){
+      ui._newCount = 0;
+      stampsList().forEach(function(t){ S.seen[t.id] = true; });
+      saveLocal(); burst(); toast('⭐ スタンプ ゲット！');
+    }
+  }
+
+  function renderChild(){
+    var d = today(), c = checksOf(d);
+    var list = itemsOf(ui.tab);
+    var nb = itemsOf('before').filter(function(i){ return c[i.id]; }).length;
+    var na = itemsOf('after').filter(function(i){ return c[i.id]; }).length;
+    var done = ui.tab === 'before' ? nb : na;
+    var tk = ticketFor(d);
+    var locked = ui.tab === 'after' && afterLocked();
+    var h = '<h2 class="hello">' + esc(S.name) + 'の きょうのチェック</h2><div class="date">' + fmtDate(d) + '</div>';
+    var un = unseenCount();
+    h += '<div class="tabs"><button data-act="tab" data-v="before" class="' + (ui.tab === 'before' ? 'on' : '') + '"><span class="te">🏫</span>いってきます前<small>' + nb + ' / ' + itemsOf('before').length + '</small></button>' +
+         '<button data-act="tab" data-v="after" class="' + (ui.tab === 'after' ? 'on' : '') + '"><span class="te">🏠</span>ただいま後<small>' + na + ' / ' + itemsOf('after').length + '</small></button>' +
+         '<button data-act="tab" data-v="stamp" class="' + (ui.tab === 'stamp' ? 'on' : '') + '"><span class="te">⭐</span>スタンプ<small>' + stampsList().length + 'こ' + (un ? ' <b style="color:#d2574f">NEW</b>' : '') + '</small></button></div>';
+    if(ui.tab === 'stamp') return h + renderStamp();
+    var pct = list.length ? Math.round(done / list.length * 100) : 0;
+    h += '<div class="bar"><i style="width:' + pct + '%"></i></div>';
+    if(ui.tab === 'before' && list.length && done === list.length) h += '<div class="banner ok">🎉 ぜんぶ できた！ いってらっしゃい！</div>';
+    if(ui.tab === 'after'){
+      if(tk && tk.status === 'approved') h += '<div class="banner ok">🎉 おうちの人が かくにん OK！ きょうも よくできました<button class="btn" style="margin-top:10px" data-act="tab" data-v="stamp">⭐ スタンプを みにいく</button></div>';
+      else if(tk && tk.status === 'pending') h += '<div class="banner wait">📨 おうちの人に おくったよ。 かくにんを まっててね</div>';
+      else if(tk && tk.status === 'redo') h += '<div class="banner redo">↩ おうちの人から：もういちど チェックしてみよう</div>';
+    }
+    if(!list.length) h += '<div class="empty">まだ こうもくが ありません。<br>おうちの人に ついかして もらってね</div>';
+    h += '<div class="list">';
+    list.forEach(function(i){
+      if(ui.cedit){
+        h += '<div class="row"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + '</span>' +
+          (i.own ? '<button class="mini del" data-act="cdel" data-id="' + i.id + '" aria-label="けす">✕</button>' : '<span class="note" style="margin:0">おうちの人が きめたよ</span>') + '</div>';
+        return;
+      }
+      var on = !!c[i.id];
+      h += '<button class="row ' + (on ? 'on' : '') + '" data-act="toggle" data-id="' + i.id + '" aria-pressed="' + on + '"' + (locked ? ' disabled' : '') + '>' +
+        '<span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + '</span>' +
+        '<span class="sw"><span class="ck">✅</span><span class="x">✕</span><i></i></span></button>';
+    });
+    h += '</div>';
+    if(ui.cedit){
+      h += '<div class="sec" style="margin-top:14px"><h3>＋ じぶんの やること（' + (ui.tab === 'before' ? '🏫 いってきます前' : '🏠 ただいま後') + '）</h3>' +
+        '<div class="emojis" id="cemo">' + EMOJI.map(function(e){ return '<button data-act="cpick" data-v="' + e + '" class="' + (e === ui.newIcon ? 'on' : '') + '">' + e + '</button>'; }).join('') + '</div>' +
+        '<input type="text" id="ct" placeholder="やること（れい：ほんを よむ）" maxlength="20">' +
+        '<div style="height:10px"></div><button class="btn" data-act="cadd">ふやす</button></div>' +
+        '<button class="btn sub" data-act="cedit">✔ おわり</button>';
+    }else{
+      h += '<button class="btn sub" style="margin-top:14px" data-act="cedit">✏️ じぶんの やることを ふやす</button>';
+    }
+    return h;
+  }
+
+  function renderStamp(){
+    var st = stampsList(), goal = S.goal, N = st.length, full = Math.floor(N / goal);
+    var showFull = N > 0 && N % goal === 0;
+    var base = (showFull ? full - 1 : full) * goal;
+    var cur = st.slice(base, base + goal);
+    var cols = goal % 5 === 0 ? 5 : (goal % 4 === 0 ? 4 : 5);
+    var COL = ['#e0574f','#2f8fd9','#2fae7f','#d98a1f','#8a4fd9'];
+    var newCount = 0;
+    var h = '<div class="card"><h3>⭐ スタンプカード ' + (showFull ? full : full + 1) + ' まいめ</h3>';
+    h += showFull
+      ? '<div class="banner ok" style="margin:10px 0 0">🎉 カードが いっぱいに なったよ！ おうちの人に つたえてね</div>'
+      : '<div class="date" style="margin:4px 0 0">あと <b>' + (goal - cur.length) + '</b> こで ごほうび！</div>';
+    h += '<div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
+    for(var i = 0; i < goal; i++){
+      if(i < cur.length){
+        var isNew = !S.seen[cur[i].id]; if(isNew) newCount++;
+        h += '<div class="slot f' + (isNew ? ' new' : '') + '" style="--c:' + COL[i % 5] + '"><span style="display:inline-block;transform:rotate(' + ((i * 37) % 21 - 10) + 'deg)">' + (cur[i].stamp || '⭐') + '</span></div>';
+      }else if(i === goal - 1){
+        h += '<div class="slot g">🎁</div>';
+      }else{
+        h += '<div class="slot e">' + (i + 1) + '</div>';
+      }
+    }
+    h += '</div>';
+    if(S.reward) h += '<div class="reward">🎁 ごほうび：<b>' + esc(S.reward) + '</b></div>';
+    h += '</div>';
+    if(full > 0) h += '<div class="date" style="margin-top:14px;text-align:center">🏆 コンプリート ' + full + ' まい</div>';
+    if(!N) h += '<div class="empty">おうちの人が チケットを かくにんすると、<br>スタンプを もらえるよ！</div>';
+    ui._newCount = newCount;
+    return h;
+  }
+
+  function renderParent(){
+    var pending = pendingList();
+    var h = '<div class="tabs">' +
+      '<button data-act="ptab" data-v="tickets" class="' + (ui.ptab === 'tickets' ? 'on' : '') + '">🎫 チケット' + (pending.length ? '<small>' + pending.length + '枚</small>' : '') + '</button>' +
+      '<button data-act="ptab" data-v="history" class="' + (ui.ptab === 'history' ? 'on' : '') + '">📒 れきし</button>' +
+      '<button data-act="ptab" data-v="settings" class="' + (ui.ptab === 'settings' ? 'on' : '') + '">⚙️ せってい</button></div>';
+    if(ui.ptab === 'tickets'){
+      if(DEV.code) h += '<div class="sybar"><span class="syt" data-s="' + SY.state + '">' + esc(syncText()) + '</span><button class="mini" data-act="syncnow">🔄 こうしん</button></div>';
+      else h += '<div class="sybar"><span>📵 iPad と まだ つながっていません（せってい で つなげます）</span></div>';
+      if(!pending.length) h += '<div class="empty">🌙 かくにん待ちの チケットは ありません。<br>こどもが「ただいま後」を ぜんぶ ✅ にすると、ここに とどきます。</div>';
+      pending.forEach(function(t){
+        h += '<div class="tw" data-id="' + t.id + '"><div class="bg"><div class="bgL">↩ もういちど</div><div class="bgR">OK ✓</div></div>' +
+          '<div class="ticket"><div class="band"><span>ただいま</span></div><div class="tb">' +
+          '<div class="t1"><b>ただいまチェック</b><span class="badge">' + t.items.length + 'こ</span></div><div class="dots"></div>' +
+          '<div class="meta">📅 ' + fmtDate(t.date) + '</div>' +
+          '<div class="meta">🕒 ' + hhmm(t.doneAt) + ' かんりょう</div>' +
+          '<div class="meta">🙂 ' + esc(S.name) + '</div>' +
+          '<div class="chips">' + t.items.map(function(i){ return '<span>' + i.icon + ' ' + esc(i.label) + '</span>'; }).join('') + '</div>' +
+          '<div class="hint"><span>← もういちど</span><span><em>👉</em> ドラッグして かくにん</span><span>OK →</span></div>' +
+          '</div></div></div>';
+      });
+    }else if(ui.ptab === 'history'){
+      var past = S.tickets.filter(function(t){ return t.status === 'approved' || t.status === 'redo'; }).sort(function(a, b){ return (b.decidedAt || 0) - (a.decidedAt || 0); });
+      if(!past.length) h += '<div class="empty">まだ かくにんずみの チケットは ありません。</div>';
+      past.forEach(function(t){
+        h += '<div class="past"><div><b>' + fmtShort(t.date) + '</b><small>' + t.items.length + 'こ ・ ' + hhmm(t.doneAt) + ' かんりょう</small></div>' +
+          '<span class="st ' + (t.status === 'redo' ? 'redo' : '') + '">' + (t.status === 'approved' ? 'OK ' + (t.stamp || '⭐') : 'もういちど') + '</span></div>';
+      });
+    }else{
+      h += renderSettings();
+    }
+    return h;
+  }
+
+  function renderSync(){
+    var h = '<div class="sec"><h3>🔗 iPad と iPhone を つなぐ</h3>';
+    if(!fbReady()){
+      h += '<p class="note" style="margin-top:0">Firebase の設定値（projectId と apiKey）が まだ 入っていません。ファイルの先頭にある FIREBASE に入れると、合言葉で つなげられます。</p>';
+    }else if(!DEV.code){
+      h += '<p class="note" style="margin:0 0 10px">1台目で「合言葉を つくる」を おして、2台目に その合言葉を 入れると、同じ記録を つかえます。</p>' +
+        '<button class="btn" data-act="mkcode">あたらしい 合言葉を つくる</button>' +
+        '<p class="note" style="margin:14px 0 6px">もう 合言葉が ある とき</p>' +
+        '<input type="text" id="jc" placeholder="合言葉（10文字）" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="32">' +
+        '<button class="btn sub" data-act="join">この合言葉で つなぐ</button>';
+    }else{
+      h += '<p class="note" style="margin:0 0 6px">合言葉（もう1台に 入れてください）</p><div class="code">' + esc(DEV.code) + '</div>' +
+        '<div class="two" style="margin-top:8px"><button class="btn sub" data-act="copycode">📋 コピー</button><button class="btn sub" data-act="syncnow">🔄 いま どうき</button></div>' +
+        '<p class="note syt" data-s="' + SY.state + '">' + esc(syncText()) + '</p>' +
+        '<button class="btn warn" data-act="unlink">' + (ui.unlinkArm ? 'もういちど タップで きりはなす' : 'この端末を きりはなす') + '</button>' +
+        '<p class="note">きりはなしても、この端末の記録は のこります。合言葉は ほかの人に おしえないでください。</p>';
+    }
+    h += '<h3 style="margin:16px 0 0">この端末は</h3><div class="two">' +
+      '<button class="btn' + (DEV.role === 'child' ? '' : ' sub') + '" data-act="role" data-v="child" aria-pressed="' + (DEV.role === 'child') + '">🧒 こども用</button>' +
+      '<button class="btn' + (DEV.role === 'parent' ? '' : ' sub') + '" data-act="role" data-v="parent" aria-pressed="' + (DEV.role === 'parent') + '">🏠 おうち用</button></div>' +
+      '<p class="note">おうち用にすると、アプリを ひらいた とき すぐに チケットが 出ます（PIN なし）。おうちの人の iPhone だけで えらんでください。</p></div>';
+    return h;
+  }
+
+  function renderSettings(){
+    var h = renderSync();
+    h += '<div class="sec"><h3>こどもの なまえ</h3><input type="text" id="nm" value="' + esc(S.name) + '" maxlength="12"></div>';
+    [['before','🏫 いってきます前'],['after','🏠 ただいま後']].forEach(function(s){
+      var list = itemsOf(s[0]);
+      h += '<div class="sec"><h3>' + s[1] + '</h3>';
+      if(!list.length) h += '<p class="note">こうもくが ありません</p>';
+      list.forEach(function(i, idx){
+        h += '<div class="srow"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + (i.own ? ' <small style="color:#6b6877;font-weight:600">（こども）</small>' : '') + '</span>' +
+          '<button class="mini" data-act="up" data-id="' + i.id + '"' + (idx === 0 ? ' disabled' : '') + ' aria-label="うえへ">↑</button>' +
+          '<button class="mini" data-act="down" data-id="' + i.id + '"' + (idx === list.length - 1 ? ' disabled' : '') + ' aria-label="したへ">↓</button>' +
+          '<button class="mini del" data-act="del" data-id="' + i.id + '" aria-label="けす">✕</button></div>';
+      });
+      h += '</div>';
+    });
+    h += '<div class="sec"><h3>＋ こうもくを ついか</h3>' +
+      '<select id="nl"><option value="before"' + (ui.newList === 'before' ? ' selected' : '') + '>🏫 いってきます前</option><option value="after"' + (ui.newList === 'after' ? ' selected' : '') + '>🏠 ただいま後</option></select>' +
+      '<div class="emojis" id="emo">' + EMOJI.map(function(e){ return '<button data-act="pick" data-v="' + e + '" class="' + (e === ui.newIcon ? 'on' : '') + '">' + e + '</button>'; }).join('') + '</div>' +
+      '<input type="text" id="nt" placeholder="なまえ（れい：ほんを よむ）" maxlength="20">' +
+      '<div style="height:10px"></div><button class="btn" data-act="add">ついかする</button></div>';
+    h += '<div class="sec"><h3>⭐ スタンプカード</h3>' +
+      '<p class="note" style="margin:0 0 6px">1まいの スタンプの かず</p>' +
+      '<select id="gl">' + [5, 8, 10, 15, 20].map(function(n){ return '<option value="' + n + '"' + (S.goal === n ? ' selected' : '') + '>' + n + ' こ</option>'; }).join('') + '</select>' +
+      '<p class="note" style="margin:12px 0 6px">ごほうび（カードが いっぱいに なったら）</p>' +
+      '<input type="text" id="rw" value="' + esc(S.reward) + '" maxlength="30" placeholder="れい：すきな おやつ"></div>';
+    h += '<div class="sec"><h3>🧪 ためす（試作用）</h3>' +
+      '<button class="btn sub" data-act="demo">きょうの「ただいま後」を ぜんぶ ✅ にする</button>' +
+      '<button class="btn sub" data-act="demostamp">スタンプを 1こ ふやす</button>' +
+      '<button class="btn warn" data-act="reset">' + (ui.resetArm ? 'もういちど タップで ぜんぶ けす' : 'データを はじめに もどす') + '</button>' +
+      '<p class="note">' + (DEV.code ? 'つながっている ときに もどすと、もう1台の 記録も はじめに もどります。' : '記録は この端末の中に 保存しています。') + '</p></div>';
+    return h;
+  }
+
+  /* ---- drag ---- */
+  function bindDrags(){
+    var wraps = app.querySelectorAll('.tw');
+    Array.prototype.forEach.call(wraps, function(wrap){
+      var tk = wrap.querySelector('.ticket'), id = wrap.getAttribute('data-id');
+      var sx = 0, dx = 0, on = false, W = 1;
+      tk.addEventListener('pointerdown', function(e){
+        on = true; ui.dragging = true; sx = e.clientX; dx = 0; W = wrap.offsetWidth || 300;
+        try{ tk.setPointerCapture(e.pointerId); }catch(x){}
+        tk.style.transition = 'none';
+      });
+      tk.addEventListener('pointermove', function(e){
+        if(!on) return;
+        dx = e.clientX - sx;
+        tk.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / W * 6) + 'deg)';
+        wrap.classList.toggle('r', dx > 0);
+        wrap.classList.toggle('l', dx < 0);
+        wrap.style.setProperty('--p', Math.min(1, Math.abs(dx) / (W * 0.4)));
+      });
+      function end(){
+        if(!on) return;
+        on = false; ui.dragging = false;
+        tk.style.transition = 'transform .22s';
+        if(Math.abs(dx) > W * 0.4){
+          var dir = dx > 0 ? 1 : -1;
+          tk.style.transform = 'translateX(' + (dir * W * 1.2) + 'px) rotate(' + (dir * 8) + 'deg)';
+          setTimeout(function(){ decide(id, dir > 0 ? 'approved' : 'redo'); }, 200);
+        }else{
+          tk.style.transform = '';
+          wrap.classList.remove('r', 'l');
+          wrap.style.setProperty('--p', 0);
+          if(ui.needRender) setTimeout(render, 250);
+        }
+        dx = 0;
+      }
+      tk.addEventListener('pointerup', end);
+      tk.addEventListener('pointercancel', end);
+    });
+  }
+
+  /* ---- effects ---- */
+  var toastT;
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+  function burst(){
+    var b = document.createElement('div'); b.className = 'burst';
+    var set = ['🎉','⭐','✨','🌟','💮','🎊'];
+    for(var i = 0; i < 16; i++){
+      var s = document.createElement('span');
+      s.textContent = set[i % set.length];
+      s.style.setProperty('--x', (Math.random() * 360 - 180) + 'px');
+      s.style.setProperty('--y', (Math.random() * -260 - 20) + 'px');
+      s.style.setProperty('--r', (Math.random() * 360 - 180) + 'deg');
+      b.appendChild(s);
+    }
+    document.body.appendChild(b);
+    setTimeout(function(){ if(b.parentNode) b.parentNode.removeChild(b); }, 1400);
+  }
+
+  /* ---- PIN ---- */
+  function showPin(){
+    ui.pin = '';
+    drawPin();
+    document.getElementById('pin').classList.add('show');
+  }
+  function hidePin(){ document.getElementById('pin').classList.remove('show'); }
+  function drawPin(shake){
+    var keys = '';
+    ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(function(k){
+      keys += k === '' ? '<span></span>' : '<button data-act="pk" data-v="' + (k === '⌫' ? 'del' : k) + '">' + k + '</button>';
+    });
+    var dots = '';
+    for(var i = 0; i < 4; i++) dots += '<i class="' + (i < ui.pin.length ? 'f' : '') + '"></i>';
+    document.getElementById('pin').innerHTML = '<div class="pbox' + (shake ? ' shake' : '') + '"><h3>おうちの人モード</h3><p>PINを いれてください（試作は 1234）</p>' +
+      '<div class="pdots">' + dots + '</div><div class="keys">' + keys + '</div><button class="pcancel" data-act="pcancel">やめる</button></div>';
+  }
+  function enterParent(){ ui.mode = 'parent'; ui.ptab = 'tickets'; render(); syncNow(); }
+  function pinKey(v){
+    if(v === 'del') ui.pin = ui.pin.slice(0, -1);
+    else if(ui.pin.length < 4) ui.pin += v;
+    if(ui.pin.length === 4){
+      if(ui.pin === PIN){ hidePin(); enterParent(); return; }
+      ui.pin = ''; drawPin(true); return;
+    }
+    drawPin();
+  }
+
+  /* ---- events ---- */
+  document.addEventListener('click', function(e){
+    var el = e.target.closest ? e.target.closest('[data-act]') : null;
+    if(!el || el.disabled) return;
+    var act = el.getAttribute('data-act'), v = el.getAttribute('data-v'), id = el.getAttribute('data-id');
+    if(act === 'mode'){
+      if(v === 'child'){ ui.mode = 'child'; ui.cedit = false; if(unseenCount() > 0) ui.tab = 'stamp'; render(); }
+      else if(ui.mode !== 'parent'){ if(DEV.role === 'parent') enterParent(); else showPin(); }
+    }else if(act === 'tab'){ ui.tab = v; ui.cedit = false; render();
+    }else if(act === 'ptab'){ ui.ptab = v; ui.resetArm = false; ui.unlinkArm = false; render();
+    }else if(act === 'toggle'){
+      if(ui.tab === 'after' && afterLocked()) return;
+      var d = today(), c = S.checks[d] = S.checks[d] || {};
+      var it = null; S.items.forEach(function(i){ if(i.id === id) it = i; });
+      if(!it) return;
+      c[id] = !c[id];
+      if(!c[id]) delete c[id];
+      c._at = now();
+      if(it.list === 'after') syncTicket(d);
+      save(); render();
+      var list = itemsOf(it.list);
+      if(c[id] && list.length && list.every(function(i){ return c[i.id]; })) burst();
+    }else if(act === 'up' || act === 'down'){
+      var idx = -1; S.items.forEach(function(i, n){ if(i.id === id) idx = n; });
+      if(idx < 0) return;
+      var lst = S.items[idx].list, step = act === 'up' ? -1 : 1, j = idx + step;
+      while(j >= 0 && j < S.items.length && S.items[j].list !== lst) j += step;
+      if(j >= 0 && j < S.items.length){ var tmp = S.items[idx]; S.items[idx] = S.items[j]; S.items[j] = tmp; touchCfg(); save(); render(); }
+    }else if(act === 'del'){
+      S.items = S.items.filter(function(i){ return i.id !== id; });
+      touchCfg(); syncTicket(today()); save(); render();
+    }else if(act === 'pick'){
+      ui.newIcon = v;
+      Array.prototype.forEach.call(document.querySelectorAll('#emo button'), function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
+    }else if(act === 'cedit'){
+      ui.cedit = !ui.cedit; render();
+    }else if(act === 'cpick'){
+      ui.newIcon = v;
+      Array.prototype.forEach.call(document.querySelectorAll('#cemo button'), function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
+    }else if(act === 'cadd'){
+      var ci = document.getElementById('ct'), ctxt = (ci.value || '').trim();
+      if(!ctxt){ toast('やることを いれてね'); return; }
+      S.items.push({ id:'c' + now(), icon:ui.newIcon, label:ctxt, list:ui.tab, own:true });
+      touchCfg(); syncTicket(today()); save(); render(); toast('ふやしたよ！');
+    }else if(act === 'cdel'){
+      S.items = S.items.filter(function(i){ return !(i.id === id && i.own); });
+      touchCfg(); syncTicket(today()); save(); render();
+    }else if(act === 'add'){
+      var inp = document.getElementById('nt'), sel = document.getElementById('nl');
+      var txt = (inp.value || '').trim();
+      if(!txt){ toast('なまえを いれてね'); return; }
+      ui.newList = sel.value;
+      S.items.push({ id:'n' + now(), icon:ui.newIcon, label:txt, list:sel.value });
+      touchCfg(); syncTicket(today()); save(); render(); toast('ついかしました');
+    }else if(act === 'demo'){
+      var dd = today(), cc = S.checks[dd] = S.checks[dd] || {};
+      itemsOf('after').forEach(function(i){ cc[i.id] = true; });
+      cc._at = now();
+      syncTicket(dd); save(); ui.ptab = 'tickets'; render(); toast('チケットが とどきました 🎫');
+    }else if(act === 'demostamp'){
+      var k = 1, ds;
+      for(;;){
+        var dt = new Date(); dt.setDate(dt.getDate() - k);
+        ds = ymd(dt);
+        if(!ticketAny(ds)) break;
+        k++;
+      }
+      S.tickets.push({ id:'d' + ds, date:ds, status:'approved', doneAt:now(), decidedAt:now(), at:now(), stamp:randStamp(),
+        items:itemsOf('after').map(function(i){ return { icon:i.icon, label:i.label }; }) });
+      save(); render(); toast('スタンプが 1こ ふえました（こどもの画面で みられます）');
+    }else if(act === 'reset'){
+      if(!ui.resetArm){ ui.resetArm = true; render(); setTimeout(function(){ if(ui.resetArm){ ui.resetArm = false; if(ui.mode === 'parent' && ui.ptab === 'settings') render(); } }, 4000); return; }
+      ui.resetArm = false; var t0 = now(); S = defaults(); S.cfgAt = t0; S.resetAt = t0; save(); render(); toast('はじめに もどしました');
+    }else if(act === 'mkcode'){
+      DEV.code = makeCode(); saveDev(); SY.ut = null; SY.state = 'off'; render();
+      syncNow().then(function(){ toast(SY.state === 'ok' ? '合言葉を つくりました。もう1台に 入れてください' : '⚠️ ' + SY.msg); });
+    }else if(act === 'join'){
+      var jv = ((document.getElementById('jc') || {}).value || '').toLowerCase().replace(/[\s\-]/g, '');
+      if(!/^[a-z0-9]{10,32}$/.test(jv)){ toast('合言葉は 10文字の 英数字です'); return; }
+      DEV.code = jv; saveDev(); SY.ut = null; SY.state = 'off'; render();
+      syncNow(true).then(function(){ render(); toast(SY.state === 'ok' ? '🔗 つながりました' : '⚠️ ' + SY.msg); });
+    }else if(act === 'copycode'){
+      try{
+        navigator.clipboard.writeText(DEV.code).then(function(){ toast('コピーしました'); }, function(){ toast('合言葉を 長おしして コピーしてね'); });
+      }catch(x){ toast('合言葉を 長おしして コピーしてね'); }
+    }else if(act === 'syncnow'){
+      syncNow().then(function(){ if(SY.state === 'err') toast('⚠️ ' + SY.msg); });
+    }else if(act === 'unlink'){
+      if(!ui.unlinkArm){ ui.unlinkArm = true; render(); setTimeout(function(){ if(ui.unlinkArm){ ui.unlinkArm = false; if(ui.mode === 'parent' && ui.ptab === 'settings') render(); } }, 4000); return; }
+      ui.unlinkArm = false; DEV.code = ''; saveDev(); SY.state = 'off'; SY.ut = null; render(); toast('きりはなしました');
+    }else if(act === 'role'){
+      DEV.role = v === 'parent' ? 'parent' : 'child'; saveDev(); render();
+      toast(DEV.role === 'parent' ? '🏠 この端末は おうち用に なりました' : '🧒 この端末は こども用に なりました');
+    }else if(act === 'pk'){ pinKey(v);
+    }else if(act === 'pcancel'){ hidePin(); if(ui.needRender) render(); }
+  });
+  document.addEventListener('change', function(e){
+    if(e.target.id === 'nm'){ S.name = (e.target.value || '').trim() || 'こども'; touchCfg(); save(); }
+    if(e.target.id === 'nl'){ ui.newList = e.target.value; }
+    if(e.target.id === 'gl'){ S.goal = parseInt(e.target.value, 10) || 10; touchCfg(); save(); }
+    if(e.target.id === 'rw'){ S.reward = (e.target.value || '').trim(); touchCfg(); save(); }
+  });
+  document.addEventListener('focusout', function(){
+    setTimeout(function(){ if(ui.needRender && !inputFocused() && !ui.dragging) render(); }, 300);
+  });
+
+  /* ---- ひらいた時・もどった時に すぐ さいしんにする ---- */
+  var hiddenAt = 0;
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden'){ hiddenAt = now(); return; }
+    if(DEV.role === 'parent' && hiddenAt && now() - hiddenAt > 5 * 60 * 1000 && !inputFocused()){
+      ui.mode = 'parent'; ui.ptab = 'tickets'; render();
+    }
+    syncNow();
+  });
+  window.addEventListener('pageshow', function(){ syncNow(); });
+  window.addEventListener('online', function(){ syncNow(); });
+  setInterval(function(){
+    if(document.visibilityState !== 'visible' || !DEV.code || SY.busy) return;
+    var iv = SY.state === 'err' ? 60000 : ((DEV.role === 'parent' || ui.mode === 'parent') ? 15000 : 30000);
+    if(now() - SY.lastTry >= iv) syncNow();
+  }, 5000);
+
+  if('serviceWorker' in navigator && location.protocol === 'https:' && !/claude/.test(location.hostname)){
+    try{ navigator.serviceWorker.register('sw.js').catch(function(){}); }catch(e){}
+  }
+
+  render();
+  syncNow();
+})();
+</script>
+</body>
+</html>
