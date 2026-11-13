@@ -64,15 +64,17 @@ h2.hello{font-size:26px;margin:6px 0 2px;line-height:1.3}
 .code{font-family:ui-monospace,Menlo,monospace;font-size:26px;letter-spacing:.12em;text-align:center;background:#f4f2f8;border-radius:12px;padding:12px;user-select:all;-webkit-user-select:all;word-break:break-all}
 /* tickets */
 .tw{position:relative;margin-bottom:8px;--p:0}
+.tw.okm .bg{background:var(--grn)}
+.tw.rdm .bg{background:var(--org-bg)}
 .tact{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
 .tact .btn{margin:0;padding:14px 8px}
+.tact .btn small{display:block;font-size:12px;font-weight:600;margin-top:3px;opacity:.9}
 .tact .btn.ok{background:var(--grn)}
 .tact .btn.redo{background:var(--org-bg);color:#8a5200}
 .tw .bg{position:absolute;inset:0;border-radius:16px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-weight:800;font-size:18px;overflow:hidden}
-.tw .bgL{color:#8a5200;opacity:0}
-.tw .bgR{color:#fff;opacity:0}
-.tw.r .bg{background:var(--grn)}
-.tw.l .bg{background:var(--org-bg)}
+.tw .bgL,.tw .bgR{opacity:0}
+.tw.okm .bg{color:#fff}
+.tw.rdm .bg{color:#8a5200}
 .tw.r .bgR{opacity:var(--p)}
 .tw.l .bgL{opacity:var(--p)}
 .ticket{position:relative;display:flex;background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(40,30,70,.16);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;overflow:hidden}
@@ -106,6 +108,8 @@ h2.hello{font-size:26px;margin:6px 0 2px;line-height:1.3}
 .row.ed .lb{min-width:0;overflow-wrap:anywhere}
 .row.ed.cur{border-color:var(--pur);background:#efeafb}
 .acts{display:flex;gap:6px;flex:none}
+.hd{flex:none;width:44px;height:52px;display:grid;place-items:center;font-size:30px;line-height:1;color:var(--pur);background:#f4f2f8;touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab;border-radius:12px}
+.row.ed.drag{border-color:var(--pur);background:#efeafb;box-shadow:0 6px 18px rgba(75,29,143,.25);transform:scale(1.02);position:relative;z-index:5}
 .acts .mini{width:40px;height:40px;font-size:17px}
 .acts .mini:disabled{opacity:.3}
 .acts .sp{width:40px}
@@ -131,6 +135,22 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
 @keyframes pop{0%{transform:scale(2.8) rotate(-30deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(0)}}
 .reward{background:var(--org-bg);color:#8a5200;border-radius:12px;padding:10px 14px;font-size:15px;text-align:center}
 .tabs .te{display:block;font-size:20px}
+.cal{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:14px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calh b{font-size:16px}
+.calh .mini:disabled{opacity:.3}
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cw{text-align:center;font-size:12px;font-weight:700;color:var(--sub);padding:2px 0}
+.cw.su{color:var(--red)}.cw.sa{color:#2f8fd9}
+.cd{position:relative;min-height:52px;border-radius:10px;background:#faf9fc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 0 2px;overflow:hidden}
+.cd i{position:absolute;left:4px;top:2px;font-style:normal;font-size:10px;color:var(--sub);font-weight:700}
+.cd .ce{font-size:22px;line-height:1}
+.cd .ce.redo{color:var(--org);font-weight:800;font-size:18px}
+.cd .ce.wait{font-size:18px}
+.cd.today{outline:2px solid var(--pur);outline-offset:-2px}
+.cd.gift{background:var(--org-bg)}
+.cd em{font-style:normal;font-size:9px;font-weight:800;color:#8a5200;line-height:1.2;margin-top:1px;text-align:center;white-space:nowrap}
+.cd.gift .ce{font-size:18px}
 /* pin */
 #pin{position:fixed;inset:0;background:rgba(30,25,50,.55);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
 #pin.show{display:flex}
@@ -199,6 +219,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
       goal: 10,
       reward: 'すきな おやつを えらべる',
       seen: {},
+      rewards: [],
       cfgAt: 0,
       resetAt: 0
     };
@@ -211,6 +232,9 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     if(typeof s.reward !== 'string') s.reward = 'すきな おやつを えらべる';
     if(typeof s.name !== 'string') s.name = 'こども';
     if(!s.seen || typeof s.seen !== 'object') s.seen = {};
+    if(!Array.isArray(s.rewards)) s.rewards = [];
+    s.rewards = s.rewards.filter(function(r){ return r && r.id && r.card; });
+    s.rewards.forEach(function(r){ if(typeof r.at !== 'number') r.at = 1; });
     if(typeof s.cfgAt !== 'number') s.cfgAt = 1;
     if(typeof s.resetAt !== 'number') s.resetAt = 0;
     Object.keys(s.checks).forEach(function(d){
@@ -257,6 +281,55 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
   function pendingList(){ return S.tickets.filter(function(t){ return t.status === 'pending'; }).sort(function(a, b){ return b.doneAt - a.doneAt; }); }
   function unseenCount(){ return stampsList().filter(function(t){ return !S.seen[t.id]; }).length; }
   function touchCfg(){ S.cfgAt = now(); }
+  /* ---- ごほうび・カレンダー ---- */
+  function rewardOf(k){ var r = null; S.rewards.forEach(function(x){ if(x.card === k && !x.void) r = x; }); return r; }
+  function fullCards(){ return Math.floor(stampsList().length / (S.goal || 10)); }
+  function unrewarded(){ var out = [], n = fullCards(); for(var k = 1; k <= n; k++){ if(!rewardOf(k)) out.push(k); } return out; }
+  function giveReward(k){
+    var r = null; S.rewards.forEach(function(x){ if(x.card === k) r = x; });
+    if(r){ r.void = false; r.date = today(); r.at = now(); }
+    else S.rewards.push({ id:'r' + k, card:k, date:today(), at:now(), void:false });
+    save(); render(); toast('🎁 ごほうびを わたしました');
+  }
+  function undoReward(k){
+    S.rewards.forEach(function(x){ if(x.card === k){ x.void = true; x.at = now(); } });
+    save(); render(); toast('とりけしました');
+  }
+  function renderCal(){
+    var off = ui.calOff || 0, base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + off);
+    var y = base.getFullYear(), m = base.getMonth(), first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+    var td = today(), given = {};
+    S.rewards.forEach(function(r){ if(!r.void && r.date) given[r.date] = r.card; });
+    var h = '<div class="cal"><div class="calh"><button class="mini" data-act="calprev" aria-label="まえの つき">‹</button><b>' + y + '年' + (m + 1) + '月</b><button class="mini" data-act="calnext" aria-label="つぎの つき"' + (off >= 0 ? ' disabled' : '') + '>›</button></div><div class="calg">';
+    for(var w = 0; w < 7; w++) h += '<div class="cw' + (w === 0 ? ' su' : w === 6 ? ' sa' : '') + '">' + WD.charAt(w) + '</div>';
+    for(var b = 0; b < first; b++) h += '<div></div>';
+    for(var d = 1; d <= days; d++){
+      var ds = y + '-' + p2(m + 1) + '-' + p2(d), tk = ticketFor(ds), inner = '';
+      if(tk && tk.status === 'approved') inner = '<span class="ce">' + (tk.stamp || '⭐') + '</span>';
+      else if(tk && tk.status === 'redo') inner = '<span class="ce redo">↩</span>';
+      else if(tk && tk.status === 'pending') inner = '<span class="ce wait">📨</span>';
+      var g = given[ds];
+      h += '<div class="cd' + (ds === td ? ' today' : '') + (g ? ' gift' : '') + '"><i>' + d + '</i>' + inner + (g ? '<em>🎁<br>もらった</em>' : '') + '</div>';
+    }
+    h += '</div><p class="note" style="margin:8px 0 0">⭐ = スタンプ　↩ = もういちど　📨 = かくにん まち　🎁 = ごほうびを もらった日</p></div>';
+    return h;
+  }
+  function rewardList(parent){
+    var h = '';
+    S.rewards.filter(function(r){ return !r.void; }).sort(function(a, b){ return b.card - a.card; }).forEach(function(r){
+      h += '<div class="past"><div><b>🎁 ' + r.card + ' まいめの ごほうび</b><small>' + (r.date ? fmtShort(r.date) : '') + ' に もらった</small></div>' +
+        (parent ? '<button class="mini" style="width:auto;padding:0 10px" data-act="rwundo" data-v="' + r.card + '">とりけす</button>' : '<span class="st">もらった！</span>') + '</div>';
+    });
+    return h;
+  }
+  function rewardBanner(){
+    var un = unrewarded(), h = '';
+    un.forEach(function(k){
+      h += '<div class="banner ok" style="background:var(--org-bg);color:#8a5200">🎁 スタンプカード ' + k + ' まいめが いっぱいです！' + (S.reward ? '<br>ごほうび：<b>' + esc(S.reward) + '</b>' : '') +
+        '<button class="btn" style="margin-top:10px;background:var(--org)" data-act="rwgive" data-v="' + k + '">🎁 ごほうびを わたした</button></div>';
+    });
+    return h;
+  }
 
   /* ---- ticket logic ---- */
   function syncTicket(d){
@@ -303,14 +376,15 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     var ch = {};
     Object.keys(s.checks).sort().forEach(function(d){ ch[d] = sortObj(s.checks[d]); });
     return { v:1, name:s.name, items:s.items, goal:s.goal, reward:s.reward, cfgAt:s.cfgAt, resetAt:s.resetAt, checks:ch,
-      tickets: s.tickets.slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }).map(sortObj) };
+      tickets: s.tickets.slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }).map(sortObj),
+      rewards: s.rewards.slice().sort(function(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }).map(sortObj) };
   }
   function canonStr(s){ return JSON.stringify(canon(s)); }
   // 2つの記録をまぜる：設定は新しい方、チェックは日ごとに新しい方、チケットは1枚ごとに新しい方
   function merge(a, b){
     var cfg = (b.cfgAt || 0) >= (a.cfgAt || 0) ? b : a;
     var o = { name:cfg.name, items:cfg.items, goal:cfg.goal, reward:cfg.reward, cfgAt:cfg.cfgAt || 0,
-      resetAt:Math.max(a.resetAt || 0, b.resetAt || 0), checks:{}, tickets:[], seen:a.seen || {} };
+      resetAt:Math.max(a.resetAt || 0, b.resetAt || 0), checks:{}, tickets:[], rewards:[], seen:a.seen || {} };
     var cut = daysAgo(90);
     [a.checks, b.checks].forEach(function(cs){
       Object.keys(cs || {}).forEach(function(d){
@@ -329,6 +403,15 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
       });
     });
     o.tickets = Object.keys(tm).map(function(k){ return tm[k]; });
+    var rm = {};
+    [a.rewards, b.rewards].forEach(function(rs){
+      (rs || []).forEach(function(r){
+        if(!r || !r.id || (r.at || 0) < o.resetAt) return;
+        var x = rm[r.id];
+        if(!x || (r.at || 0) > (x.at || 0)) rm[r.id] = r;
+      });
+    });
+    o.rewards = Object.keys(rm).map(function(k){ return rm[k]; });
     return normalize(JSON.parse(JSON.stringify(o)));
   }
   function errText(j, code){
@@ -443,6 +526,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     h += ui.mode === 'child' ? renderChild() : renderParent();
     app.innerHTML = h;
     bindDrags();
+    bindSort();
     updateBadge();
     if(ui._newCount){
       ui._newCount = 0;
@@ -474,15 +558,11 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
       else if(tk && tk.status === 'redo') h += '<div class="banner redo">↩ おうちの人から：もういちど チェックしてみよう</div>';
     }
     if(!list.length) h += '<div class="empty">まだ こうもくが ありません。<br>おうちの人に ついかして もらってね</div>';
-    h += '<div class="list">';
+    h += '<div class="list" id="slist" data-list="' + ui.tab + '">';
     list.forEach(function(i){
       if(ui.cedit){
-        var pos = list.indexOf(i);
-        h += '<div class="row ed' + (ui.editId === i.id ? ' cur' : '') + '"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + (i.own ? '' : ' <span title="おうちの人が きめたよ">🔒</span>') + '</span>' +
-          '<span class="acts"><button class="mini" data-act="up" data-id="' + i.id + '"' + (pos === 0 ? ' disabled' : '') + ' aria-label="うえへ">↑</button>' +
-          '<button class="mini" data-act="down" data-id="' + i.id + '"' + (pos === list.length - 1 ? ' disabled' : '') + ' aria-label="したへ">↓</button>' +
-          (i.own ? '<button class="mini" data-act="cedit1" data-id="' + i.id + '" aria-label="なおす">✏️</button><button class="mini del" data-act="cdel" data-id="' + i.id + '" aria-label="けす">✕</button>' : '<span class="sp"></span><span class="sp"></span>') +
-          '</span></div>';
+        h += '<div class="row ed' + (ui.editId === i.id ? ' cur' : '') + '" data-id="' + i.id + '"><span class="ic">' + i.icon + '</span><span class="lb">' + esc(i.label) + (i.own ? '' : ' <span title="おうちの人が きめたよ">🔒</span>') + '</span>' +
+          (i.own ? '<span class="acts"><button class="mini" data-act="cedit1" data-id="' + i.id + '" aria-label="なおす">✏️</button><button class="mini del" data-act="cdel" data-id="' + i.id + '" aria-label="けす">✕</button></span>' : '') + '<span class="hd" data-sort="1" aria-label="ならびかえ（おさえて うごかす）">≡</span></div>';
         return;
       }
       var on = !!c[i.id];
@@ -493,7 +573,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     h += '</div>';
     if(ui.cedit){
       var ed = null; S.items.forEach(function(i){ if(i.id === ui.editId && i.own) ed = i; });
-      h += '<p class="note" style="margin:10px 0 0">↑↓ で ならびかえ。✏️ で なおす。🔒 は おうちの人が きめた やること（ならびかえだけ できるよ）</p>';
+      h += '<p class="note" style="margin:10px 0 0">みぎはしの ≡ を おさえたまま うごかすと ならびかえ。✏️ で なおす。🔒 は おうちの人が きめた やること（ならびかえだけ できるよ）</p>';
       h += '<div class="sec" style="margin-top:14px"><h3>' + (ed ? '✏️ なおす' : '＋ じぶんの やること') + '（' + (ui.tab === 'before' ? '🏫 いってきます前' : '🏠 ただいま後') + '）</h3>' +
         '<div class="emojis" id="cemo">' + EMOJI.map(function(e){ return '<button data-act="cpick" data-v="' + e + '" class="' + (e === ui.newIcon ? 'on' : '') + '">' + e + '</button>'; }).join('') + '</div>' +
         '<input type="text" id="ct" placeholder="やること（れい：ほんを よむ）" maxlength="20" value="' + (ed ? esc(ed.label) : '') + '">' +
@@ -516,7 +596,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     var newCount = 0;
     var h = '<div class="card"><h3>⭐ スタンプカード ' + (showFull ? full : full + 1) + ' まいめ</h3>';
     h += showFull
-      ? '<div class="banner ok" style="margin:10px 0 0">🎉 カードが いっぱいに なったよ！ おうちの人に つたえてね</div>'
+      ? (rewardOf(full) ? '<div class="banner ok" style="margin:10px 0 0">🎁 ごほうびを もらったよ！（' + fmtShort(rewardOf(full).date) + '）</div>' : '<div class="banner ok" style="margin:10px 0 0">🎉 カードが いっぱいに なったよ！ おうちの人に つたえてね</div>')
       : '<div class="date" style="margin:4px 0 0">あと <b>' + (goal - cur.length) + '</b> こで ごほうび！</div>';
     h += '<div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
     for(var i = 0; i < goal; i++){
@@ -533,6 +613,9 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     if(S.reward) h += '<div class="reward">🎁 ごほうび：<b>' + esc(S.reward) + '</b></div>';
     h += '</div>';
     if(full > 0) h += '<div class="date" style="margin-top:14px;text-align:center">🏆 コンプリート ' + full + ' まい</div>';
+    var rl = rewardList(false);
+    if(rl) h += '<div style="margin-top:10px">' + rl + '</div>';
+    h += renderCal();
     if(DEV.code) h += '<button class="btn sub" data-act="syncnow">🔄 さいしんに する</button>';
     h += '<div class="sec" style="margin-top:14px"><h3>⭐ スタンプの もらいかた</h3><p class="note" style="margin:0;font-size:14px">① 「ただいま後」を ぜんぶ ✅ にする<br>② おうちの人に チケットが とどく<br>③ おうちの人が OK にすると、スタンプを 1こ もらえる<br><span style="color:#6b6877">（1日 1こ。「もういちど」の ときは、もう1回 ぜんぶ ✅ にしよう）</span></p></div>';
     ui._newCount = newCount;
@@ -548,21 +631,24 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     if(ui.ptab === 'tickets'){
       if(DEV.code) h += '<div class="sybar"><span class="syt" data-s="' + SY.state + '">' + esc(syncText()) + '</span><button class="mini" data-act="syncnow">🔄 こうしん</button></div>';
       else h += '<div class="sybar"><span>📵 iPad と まだ つながっていません（せってい で つなげます）</span></div>';
+      h += rewardBanner();
       if(!pending.length) h += '<div class="empty">🌙 かくにん待ちの チケットは ありません。<br>こどもが「ただいま後」を ぜんぶ ✅ にすると、ここに とどきます。</div>';
       pending.forEach(function(t){
-        h += '<div class="tw" data-id="' + t.id + '"><div class="bg"><div class="bgL">↩ もういちど</div><div class="bgR">OK ✓</div></div>' +
+        h += '<div class="tw okm" data-id="' + t.id + '"><div class="bg"><div class="bgL">✅ OK ✓</div><div class="bgR">✅ OK ✓</div></div>' +
           '<div class="ticket"><div class="band"><span>ただいま</span></div><div class="tb">' +
           '<div class="t1"><b>ただいまチェック</b><span class="badge">' + t.items.length + 'こ</span></div><div class="dots"></div>' +
           '<div class="meta">📅 ' + fmtDate(t.date) + '</div>' +
           '<div class="meta">🕒 ' + hhmm(t.doneAt) + ' かんりょう</div>' +
           '<div class="meta">🙂 ' + esc(S.name) + '</div>' +
           '<div class="chips">' + t.items.map(function(i){ return '<span>' + i.icon + ' ' + esc(i.label) + '</span>'; }).join('') + '</div>' +
-          '<div class="hint" style="justify-content:center"><span><em>👉</em> よこに ドラッグ か、下の ボタン</span></div>' +
+          '<div class="hint" style="justify-content:center"><span><em>👉</em> よこに スワイプで OK</span></div>' +
           '</div></div></div>' +
-          '<div class="tact"><button class="btn redo" data-act="tkredo" data-id="' + t.id + '">↩ もういちど</button><button class="btn ok" data-act="tkok" data-id="' + t.id + '">OK ✓</button></div>';
+          '<div class="tact"><button class="btn redo" data-act="tkredo" data-id="' + t.id + '">↩ もういちど<small>もう1回 やってもらう</small></button><button class="btn ok" data-act="tkok" data-id="' + t.id + '">✅ OK<small>スタンプを おす</small></button></div>';
       });
     }else if(ui.ptab === 'history'){
+      h += rewardBanner() + rewardList(true) + renderCal();
       var past = S.tickets.filter(function(t){ return t.status === 'approved' || t.status === 'redo'; }).sort(function(a, b){ return (b.decidedAt || 0) - (a.decidedAt || 0); });
+      h += '<h3 style="margin:18px 0 8px;font-size:15px">📒 チケットの れきし</h3>';
       if(!past.length) h += '<div class="empty">まだ かくにんずみの チケットは ありません。</div>';
       past.forEach(function(t){
         h += '<div class="past"><div><b>' + fmtShort(t.date) + '</b><small>' + t.items.length + 'こ ・ ' + hhmm(t.doneAt) + ' かんりょう</small></div>' +
@@ -648,19 +734,18 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     Array.prototype.forEach.call(wraps, function(wrap){
       var tk = wrap.querySelector('.ticket'), id = wrap.getAttribute('data-id');
       var sx = 0, dx = 0, on = false, W = 1;
-      tk.addEventListener('pointerdown', function(e){
-        on = true; ui.dragging = true; sx = e.clientX; dx = 0; W = wrap.offsetWidth || 300;
-        try{ tk.setPointerCapture(e.pointerId); }catch(x){}
+      function start(x){
+        on = true; ui.dragging = true; sx = x; dx = 0; W = wrap.offsetWidth || 300;
         tk.style.transition = 'none';
-      });
-      tk.addEventListener('pointermove', function(e){
+      }
+      function move(x){
         if(!on) return;
-        dx = e.clientX - sx;
+        dx = x - sx;
         tk.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / W * 6) + 'deg)';
         wrap.classList.toggle('r', dx > 0);
         wrap.classList.toggle('l', dx < 0);
         wrap.style.setProperty('--p', Math.min(1, Math.abs(dx) / (W * 0.4)));
-      });
+      }
       function end(){
         if(!on) return;
         on = false; ui.dragging = false;
@@ -668,7 +753,7 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
         if(Math.abs(dx) > W * 0.4){
           var dir = dx > 0 ? 1 : -1;
           tk.style.transform = 'translateX(' + (dir * W * 1.2) + 'px) rotate(' + (dir * 8) + 'deg)';
-          setTimeout(function(){ decide(id, dir > 0 ? 'approved' : 'redo'); }, 200);
+          setTimeout(function(){ decide(id, 'approved'); }, 200);
         }else{
           tk.style.transform = '';
           wrap.classList.remove('r', 'l');
@@ -677,8 +762,101 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
         }
         dx = 0;
       }
-      tk.addEventListener('pointerup', end);
-      tk.addEventListener('pointercancel', end);
+      /* マウス・ペン：pointer イベント */
+      tk.addEventListener('pointerdown', function(e){
+        if(e.pointerType === 'touch' || false) return;
+        start(e.clientX);
+        try{ tk.setPointerCapture(e.pointerId); }catch(x){}
+      });
+      tk.addEventListener('pointermove', function(e){ if(e.pointerType !== 'touch') move(e.clientX); });
+      tk.addEventListener('pointerup', function(e){ if(e.pointerType !== 'touch') end(); });
+      tk.addEventListener('pointercancel', function(e){ if(e.pointerType !== 'touch') end(); });
+      /* ゆび：touch イベント（画面スクロールを止める。passive:false が必要） */
+      tk.addEventListener('touchstart', function(e){
+        if(e.touches.length !== 1) return;
+        start(e.touches[0].clientX);
+      }, { passive:true });
+      tk.addEventListener('touchmove', function(e){
+        if(!on) return;
+        if(e.cancelable) e.preventDefault();
+        move(e.touches[0].clientX);
+      }, { passive:false });
+      tk.addEventListener('touchend', end);
+      tk.addEventListener('touchcancel', end);
+    });
+  }
+
+  /* ---- こどもの ならびかえ（≡ を おさえて うごかす） ---- */
+  function bindSort(){
+    var box = document.getElementById('slist');
+    if(!box || !ui.cedit) return;
+    var listName = box.getAttribute('data-list');
+    var cur = null, on = false, lastY = 0, scrollT = null;
+    function rowsEl(){ return Array.prototype.slice.call(box.querySelectorAll('.row.ed')); }
+    function begin(row){ cur = row; on = true; ui.dragging = true; row.classList.add('drag'); }
+    function over(y){
+      lastY = y;
+      var rows = rowsEl();
+      for(var k = 0; k < rows.length; k++){
+        var r = rows[k]; if(r === cur) continue;
+        var bb = r.getBoundingClientRect();
+        if(y >= bb.top && y <= bb.bottom){
+          if(y < bb.top + bb.height / 2) box.insertBefore(cur, r);
+          else box.insertBefore(cur, r.nextSibling);
+          return;
+        }
+      }
+    }
+    function edge(){
+      if(!on) return;
+      var h = window.innerHeight, step = 0;
+      if(lastY < 90) step = -10; else if(lastY > h - 90) step = 10;
+      if(step) window.scrollBy(0, step);
+      scrollT = setTimeout(edge, 16);
+    }
+    function finish(){
+      if(!on) return;
+      on = false; ui.dragging = false; clearTimeout(scrollT);
+      cur.classList.remove('drag');
+      var ids = rowsEl().map(function(r){ return r.getAttribute('data-id'); });
+      var slots = [];
+      S.items.forEach(function(it, n){ if(it.list === listName) slots.push(n); });
+      var byId = {}; S.items.forEach(function(it){ byId[it.id] = it; });
+      var changed = false;
+      ids.forEach(function(id, n){ if(byId[id] && S.items[slots[n]] !== byId[id]){ S.items[slots[n]] = byId[id]; changed = true; } });
+      cur = null;
+      if(changed){ touchCfg(); save(); }
+      render();
+      if(changed) toast('ならびかえたよ');
+    }
+    Array.prototype.forEach.call(box.querySelectorAll('.hd'), function(hd){
+      var row = hd.parentNode;
+      hd.addEventListener('touchstart', function(e){
+        if(e.touches.length !== 1) return;
+        begin(row); lastY = e.touches[0].clientY; edge();
+      }, { passive:true });
+      hd.addEventListener('touchmove', function(e){
+        if(!on) return;
+        if(e.cancelable) e.preventDefault();
+        over(e.touches[0].clientY);
+      }, { passive:false });
+      hd.addEventListener('touchend', finish);
+      hd.addEventListener('touchcancel', finish);
+      hd.addEventListener('pointerdown', function(e){
+        if(e.pointerType === 'touch') return;
+        e.preventDefault();
+        begin(row); lastY = e.clientY; edge();
+        function mv(ev){ over(ev.clientY); }
+        function up(){
+          document.removeEventListener('pointermove', mv);
+          document.removeEventListener('pointerup', up);
+          document.removeEventListener('pointercancel', up);
+          finish();
+        }
+        document.addEventListener('pointermove', mv);
+        document.addEventListener('pointerup', up);
+        document.addEventListener('pointercancel', up);
+      });
     });
   }
 
@@ -840,6 +1018,10 @@ input[type=text],select{font:inherit;font-size:16px;border:1px solid #cfcbd8;bor
     }else if(act === 'role'){
       DEV.role = v === 'parent' ? 'parent' : 'child'; saveDev(); render();
       toast(DEV.role === 'parent' ? '🏠 この端末は おうち用に なりました' : '🧒 この端末は こども用に なりました');
+    }else if(act === 'calprev'){ ui.calOff = (ui.calOff || 0) - 1; render();
+    }else if(act === 'calnext'){ ui.calOff = Math.min(0, (ui.calOff || 0) + 1); render();
+    }else if(act === 'rwgive'){ giveReward(parseInt(v, 10));
+    }else if(act === 'rwundo'){ undoReward(parseInt(v, 10));
     }else if(act === 'tkok'){ decide(id, 'approved');
     }else if(act === 'tkredo'){ decide(id, 'redo');
     }else if(act === 'pk'){ pinKey(v);
